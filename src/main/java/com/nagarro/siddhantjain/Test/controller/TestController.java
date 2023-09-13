@@ -11,5 +11,10 @@ public class TestController {
 		
 		return "This is a test API";
 	}
-
+	
+	@GetMapping("/test2")
+	public String test2() {
+		
+		return "This is a test2 API";
+	}
 }
