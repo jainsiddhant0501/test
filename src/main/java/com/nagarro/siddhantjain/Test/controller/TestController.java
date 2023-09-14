@@ -19,7 +19,7 @@ public class TestController {
 	}
 
 	@GetMapping("/user")
-	public String test2() {
+	public String user() {
 		
 		return "This is a dummy user with id 101";
 	}
