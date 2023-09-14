@@ -17,4 +17,10 @@ public class TestController {
 		
 		return "This is a test2 API";
 	}
+
+	@GetMapping("/user")
+	public String test2() {
+		
+		return "This is a dummy user with id 101";
+	}
 }
