@@ -9,7 +9,7 @@ public class TestController {
 	@GetMapping("/test")
 	public String test() {
 		
-		return "This is a test API";
+		return "This is a test springboot API";
 	}
 	
 
