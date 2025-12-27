@@ -4,7 +4,6 @@
 <meta charset="UTF-8" />
 <title>Presence</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
 <style>
 html, body {
   margin: 0;
@@ -26,29 +25,15 @@ html, body {
   z-index: 10;
 }
 
-#overlay div {
-  text-align: center;
-}
+#overlay div { text-align: center; }
+#overlay h1 { font-weight: 500; letter-spacing: 2px; }
+#overlay p  { font-size: 0.85rem; color: #aaa; letter-spacing: 1px; }
 
-#overlay h1 {
-  font-weight: 500;
-  letter-spacing: 2px;
-}
-
-#overlay p {
-  font-size: 0.85rem;
-  color: #aaa;
-  letter-spacing: 1px;
-}
-
-canvas {
-  display: block;
-}
+canvas { display: block; }
 </style>
 </head>
 
 <body>
-
 <div id="overlay">
   <div>
     <h1>Tap to begin</h1>
@@ -62,8 +47,8 @@ canvas {
 // ==========================
 // 🔴 PERSONALIZATION
 // ==========================
-const HER_NAME = "Naina";                 
-const HER_MSG  = "this was always for you";
+const HER_NAME = "Naina";          // <-- NAAM
+const HER_MSG  = "this was always for you"; // <-- MESSAGE
 // ==========================
 
 const canvas = document.getElementById("c");
@@ -78,7 +63,7 @@ window.addEventListener("resize", resize);
 resize();
 
 // --------------------------
-// AUDIO
+// AUDIO SETUP
 // --------------------------
 let audioCtx, analyser, dataArray;
 let started = false;
@@ -86,7 +71,6 @@ let started = false;
 const overlay = document.getElementById("overlay");
 overlay.onclick = async () => {
   overlay.remove();
-
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const source = audioCtx.createMediaStreamSource(stream);
@@ -100,7 +84,7 @@ overlay.onclick = async () => {
 };
 
 // --------------------------
-// ORBS
+// ORB SYSTEM
 // --------------------------
 class Orb {
   constructor() {
@@ -108,26 +92,20 @@ class Orb {
     this.radius = Math.random() * Math.min(w, h) * 0.4;
     this.speed = 0.001 + Math.random() * 0.002;
   }
-
   update(energy) {
     this.angle += this.speed * (1 + energy * 0.02);
   }
-
   draw(energy, revealed) {
-    const x = w / 2 + Math.cos(this.angle) * (this.radius + energy * 1.2);
-    const y = h / 2 + Math.sin(this.angle) * (this.radius + energy * 1.2);
-
+    const x = w/2 + Math.cos(this.angle) * (this.radius + energy * 1.2);
+    const y = h/2 + Math.sin(this.angle) * (this.radius + energy * 1.2);
     ctx.beginPath();
     ctx.arc(x, y, 2 + energy * 0.04, 0, Math.PI * 2);
-
     ctx.fillStyle = revealed
       ? `rgba(244,180,200,${0.6 + energy * 0.002})`
       : `rgba(180,180,255,0.4)`;
-
     ctx.fill();
   }
 }
-
 const orbs = Array.from({ length: 240 }, () => new Orb());
 
 // --------------------------
@@ -136,9 +114,10 @@ const orbs = Array.from({ length: 240 }, () => new Orb());
 let locked = false;
 let revealTime = 0;
 let typedChars = 0;
+const TYPE_SPEED = 18; // letters per second (mobile-safe)
 
 // --------------------------
-// LOOP
+// ANIMATION LOOP
 // --------------------------
 function animate(ts) {
   ctx.fillStyle = "rgba(5,5,10,0.25)";
@@ -147,10 +126,10 @@ function animate(ts) {
   let energy = 0;
   if (started) {
     analyser.getByteFrequencyData(dataArray);
-    energy =
-      dataArray.reduce((sum, v) => sum + v, 0) / dataArray.length;
+    energy = dataArray.reduce((s,v)=>s+v,0) / dataArray.length;
   }
 
+  // Mobile-friendly thresholds
   const revealProgress = Math.min(energy / 30, 1);
   const nameRevealed = revealProgress > 0.8;
 
@@ -159,56 +138,38 @@ function animate(ts) {
     revealTime = ts;
   }
 
-  orbs.forEach(o => {
-    o.update(energy);
-    o.draw(energy, locked);
-  });
+  orbs.forEach(o => { o.update(energy); o.draw(energy, locked); });
 
-  // --------------------------
-  // NAME
-  // --------------------------
+  // -------- NAME --------
   ctx.save();
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
-  ctx.fillText(
-    locked ? HER_NAME : "stay here",
-    w / 2,
-    h / 2 - 10
-  );
+  ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 - 10);
   ctx.restore();
 
-  // --------------------------
-  // TYPEWRITER MESSAGE
-  // --------------------------
+  // -------- TYPEWRITER MESSAGE --------
   if (locked) {
     const elapsed = (ts - revealTime) / 1000;
-
-    if (elapsed > 1.5 && typedChars < HER_MSG.length) {
-      typedChars += 0.5; // typing speed
+    if (elapsed > 1.5) {
+      typedChars = Math.min(
+        HER_MSG.length,
+        Math.floor((elapsed - 1.5) * TYPE_SPEED)
+      );
     }
-
-    const visibleText = HER_MSG.slice(0, Math.floor(typedChars));
-
+    const visible = HER_MSG.slice(0, typedChars);
     ctx.save();
-    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.font = "16px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText(
-      visibleText,
-      w / 2,
-      h / 2 + 30
-    );
+    ctx.fillText(visible, w/2, h/2 + 30);
     ctx.restore();
   }
 
   requestAnimationFrame(animate);
 }
-
 requestAnimationFrame(animate);
 </script>
-
 </body>
 </html>
