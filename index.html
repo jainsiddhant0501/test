@@ -60,62 +60,54 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// --------------------------
-// AUDIO
-// --------------------------
+// ---------------- AUDIO ----------------
 let audioCtx, analyser, dataArray;
 let started = false;
 
-const overlay = document.getElementById("overlay");
-overlay.onclick = async () => {
-  overlay.remove();
+document.getElementById("overlay").onclick = async () => {
+  document.getElementById("overlay").remove();
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const source = audioCtx.createMediaStreamSource(stream);
+  const src = audioCtx.createMediaStreamSource(stream);
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 256;
   dataArray = new Uint8Array(analyser.frequencyBinCount);
-  source.connect(analyser);
+  src.connect(analyser);
   started = true;
 };
 
-// --------------------------
-// ORBS
-// --------------------------
+// ---------------- ORBS ----------------
 class Orb {
   constructor() {
-    this.angle = Math.random() * Math.PI * 2;
-    this.radius = Math.random() * Math.min(w, h) * 0.4;
-    this.speed = 0.001 + Math.random() * 0.002;
+    this.a = Math.random() * Math.PI * 2;
+    this.r = Math.random() * Math.min(w, h) * 0.4;
+    this.s = 0.001 + Math.random() * 0.002;
   }
-  update(energy) {
-    this.angle += this.speed * (1 + energy * 0.02);
-  }
-  draw(energy, revealed) {
-    const x = w/2 + Math.cos(this.angle) * (this.radius + energy * 1.2);
-    const y = h/2 + Math.sin(this.angle) * (this.radius + energy * 1.2);
+  update(e) { this.a += this.s * (1 + e * 0.02); }
+  draw(e, warm) {
+    const x = w/2 + Math.cos(this.a) * (this.r + e * 1.2);
+    const y = h/2 + Math.sin(this.a) * (this.r + e * 1.2);
     ctx.beginPath();
-    ctx.arc(x, y, 2 + energy * 0.04, 0, Math.PI * 2);
-    ctx.fillStyle = revealed
-      ? `rgba(244,180,200,${0.6 + energy * 0.002})`
+    ctx.arc(x, y, 2 + e * 0.04, 0, Math.PI * 2);
+    ctx.fillStyle = warm
+      ? `rgba(244,180,200,${0.6 + e * 0.002})`
       : `rgba(180,180,255,0.4)`;
     ctx.fill();
   }
 }
-const orbs = Array.from({ length: 240 }, () => new Orb());
+const orbs = Array.from({ length: 220 }, () => new Orb());
 
-// --------------------------
-// STATE
-// --------------------------
+// ---------------- STATE ----------------
 let locked = false;
-let revealTime = 0;
-let typedChars = 0;
-const TYPE_SPEED = 18; // letters/sec
-let finished = false;
+let revealAt = 0;
 
-// --------------------------
-// LOOP
-// --------------------------
+let typedChars = 0;
+const TYPE_SPEED = 18;
+
+let finished = false;
+let finishedAt = 0;
+
+// ---------------- LOOP ----------------
 function animate(ts) {
   ctx.fillStyle = "rgba(5,5,10,0.25)";
   ctx.fillRect(0, 0, w, h);
@@ -126,16 +118,14 @@ function animate(ts) {
     energy = dataArray.reduce((s,v)=>s+v,0) / dataArray.length;
   }
 
-  // mobile-friendly thresholds
   const revealProgress = Math.min(energy / 30, 1);
-  const nameRevealed = revealProgress > 0.8;
+  const triggerName = revealProgress > 0.8;
 
-  if (nameRevealed && !locked) {
+  if (triggerName && !locked) {
     locked = true;
-    revealTime = ts;
+    revealAt = ts;
   }
 
-  // Freeze motion after finish
   orbs.forEach(o => {
     if (!finished) o.update(energy);
     o.draw(energy, locked);
@@ -147,48 +137,59 @@ function animate(ts) {
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 - 10);
+  ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 - 12);
   ctx.restore();
 
-  // -------- TYPEWRITER MESSAGE --------
-  if (locked) {
-    const elapsed = (ts - revealTime) / 1000;
+  // -------- TYPEWRITER --------
+  if (locked && !finished) {
+    const elapsed = (ts - revealAt) / 1000;
     if (elapsed > 1.5) {
       typedChars = Math.min(
         HER_MSG.length,
         Math.floor((elapsed - 1.5) * TYPE_SPEED)
       );
     }
-    const visible = HER_MSG.slice(0, typedChars);
+
     ctx.save();
     ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.font = "16px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText(visible, w/2, h/2 + 30);
+    ctx.fillText(
+      HER_MSG.slice(0, typedChars),
+      w/2,
+      h/2 + 28
+    );
     ctx.restore();
 
-    if (typedChars === HER_MSG.length) finished = true;
+    if (typedChars === HER_MSG.length) {
+      finished = true;
+      finishedAt = ts;
+    }
   }
 
-  // -------- FINAL PAYOFF --------
+  // -------- FINAL PAYOFF (DELAYED) --------
   if (finished) {
+    const t = (ts - finishedAt) / 1000;
+
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.fillRect(0, 0, w, h);
 
-    const pulse = 0.5 + 0.5 * Math.sin(ts / 250);
+    const pulse = 0.5 + 0.5 * Math.sin(ts / 260);
     ctx.globalAlpha = pulse;
-    ctx.strokeStyle = "rgba(255,180,200,0.8)";
+    ctx.strokeStyle = "rgba(255,180,200,0.85)";
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(w/2, h/2, 90 + pulse * 10, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    ctx.font = "15px system-ui";
-    ctx.textAlign = "center";
-    ctx.fillText(FINAL_LINE, w/2, h/2 + 70);
+    if (t > 0.8) {
+      ctx.globalAlpha = Math.min((t - 0.8), 1);
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = "17px system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(FINAL_LINE, w/2, h/2 + 70);
+    }
     ctx.restore();
   }
 
