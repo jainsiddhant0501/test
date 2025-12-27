@@ -12,7 +12,6 @@ html, body {
   overflow: hidden;
   font-family: system-ui, -apple-system, BlinkMacSystemFont;
 }
-
 #overlay {
   position: fixed;
   inset: 0;
@@ -24,11 +23,9 @@ html, body {
   cursor: pointer;
   z-index: 10;
 }
-
 #overlay div { text-align: center; }
 #overlay h1 { font-weight: 500; letter-spacing: 2px; }
 #overlay p  { font-size: 0.85rem; color: #aaa; letter-spacing: 1px; }
-
 canvas { display: block; }
 </style>
 </head>
@@ -47,8 +44,9 @@ canvas { display: block; }
 // ==========================
 // 🔴 PERSONALIZATION
 // ==========================
-const HER_NAME = "Naina";          // <-- NAAM
-const HER_MSG  = "this was always for you"; // <-- MESSAGE
+const HER_NAME   = "Naina";
+const HER_MSG    = "this was always for you";
+const FINAL_LINE = "and I wanted you to feel it";
 // ==========================
 
 const canvas = document.getElementById("c");
@@ -63,7 +61,7 @@ window.addEventListener("resize", resize);
 resize();
 
 // --------------------------
-// AUDIO SETUP
+// AUDIO
 // --------------------------
 let audioCtx, analyser, dataArray;
 let started = false;
@@ -74,17 +72,15 @@ overlay.onclick = async () => {
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const source = audioCtx.createMediaStreamSource(stream);
-
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 256;
   dataArray = new Uint8Array(analyser.frequencyBinCount);
-
   source.connect(analyser);
   started = true;
 };
 
 // --------------------------
-// ORB SYSTEM
+// ORBS
 // --------------------------
 class Orb {
   constructor() {
@@ -114,10 +110,11 @@ const orbs = Array.from({ length: 240 }, () => new Orb());
 let locked = false;
 let revealTime = 0;
 let typedChars = 0;
-const TYPE_SPEED = 18; // letters per second (mobile-safe)
+const TYPE_SPEED = 18; // letters/sec
+let finished = false;
 
 // --------------------------
-// ANIMATION LOOP
+// LOOP
 // --------------------------
 function animate(ts) {
   ctx.fillStyle = "rgba(5,5,10,0.25)";
@@ -129,7 +126,7 @@ function animate(ts) {
     energy = dataArray.reduce((s,v)=>s+v,0) / dataArray.length;
   }
 
-  // Mobile-friendly thresholds
+  // mobile-friendly thresholds
   const revealProgress = Math.min(energy / 30, 1);
   const nameRevealed = revealProgress > 0.8;
 
@@ -138,7 +135,11 @@ function animate(ts) {
     revealTime = ts;
   }
 
-  orbs.forEach(o => { o.update(energy); o.draw(energy, locked); });
+  // Freeze motion after finish
+  orbs.forEach(o => {
+    if (!finished) o.update(energy);
+    o.draw(energy, locked);
+  });
 
   // -------- NAME --------
   ctx.save();
@@ -164,6 +165,30 @@ function animate(ts) {
     ctx.font = "16px system-ui";
     ctx.textAlign = "center";
     ctx.fillText(visible, w/2, h/2 + 30);
+    ctx.restore();
+
+    if (typedChars === HER_MSG.length) finished = true;
+  }
+
+  // -------- FINAL PAYOFF --------
+  if (finished) {
+    ctx.save();
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(0, 0, w, h);
+
+    const pulse = 0.5 + 0.5 * Math.sin(ts / 250);
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = "rgba(255,180,200,0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(w/2, h/2, 90 + pulse * 10, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.font = "15px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(FINAL_LINE, w/2, h/2 + 70);
     ctx.restore();
   }
 
