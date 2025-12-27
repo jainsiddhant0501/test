@@ -97,6 +97,24 @@ class Orb {
 }
 const orbs = Array.from({ length: 220 }, () => new Orb());
 
+// ---------------- HEART DRAW ----------------
+function drawHeart(cx, cy, size, alpha) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(size, size);
+
+  ctx.beginPath();
+  ctx.moveTo(0, -0.3);
+  ctx.bezierCurveTo(-0.5, -0.8, -1.4, -0.1, 0, 1);
+  ctx.bezierCurveTo(1.4, -0.1, 0.5, -0.8, 0, -0.3);
+  ctx.closePath();
+
+  ctx.strokeStyle = `rgba(255,180,200,${alpha})`;
+  ctx.lineWidth = 2 / size;
+  ctx.stroke();
+  ctx.restore();
+}
+
 // ---------------- STATE ----------------
 let locked = false;
 let revealAt = 0;
@@ -167,29 +185,19 @@ function animate(ts) {
     }
   }
 
-  // -------- FINAL PAYOFF (DELAYED) --------
+  // -------- FINAL HEART PAYOFF --------
   if (finished) {
-    const t = (ts - finishedAt) / 1000;
-
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.fillRect(0, 0, w, h);
 
-    const pulse = 0.5 + 0.5 * Math.sin(ts / 260);
-    ctx.globalAlpha = pulse;
-    ctx.strokeStyle = "rgba(255,180,200,0.85)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(w/2, h/2, 90 + pulse * 10, 0, Math.PI * 2);
-    ctx.stroke();
+    const pulse = 0.6 + 0.4 * Math.sin(ts / 260);
+    drawHeart(w/2, h/2, 120 + pulse * 8, pulse);
 
-    if (t > 0.8) {
-      ctx.globalAlpha = Math.min((t - 0.8), 1);
-      ctx.fillStyle = "rgba(255,255,255,0.95)";
-      ctx.font = "17px system-ui";
-      ctx.textAlign = "center";
-      ctx.fillText(FINAL_LINE, w/2, h/2 + 70);
-    }
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.font = "17px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText(FINAL_LINE, w/2, h/2 + 85);
     ctx.restore();
   }
 
