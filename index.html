@@ -40,8 +40,8 @@ const FINAL_LINE = "and I wanted you to feel it";
 
 const canvas = document.getElementById("c");
 const ctx = canvas.getContext("2d");
-let w, h;
 
+let w, h;
 function resize() {
   w = canvas.width = innerWidth;
   h = canvas.height = innerHeight;
@@ -63,7 +63,7 @@ overlay.onclick = async () => {
   started = true;
 };
 
-// ---------------- HEART OUTLINE POINTS ----------------
+// ---------------- HEART POINTS ----------------
 function generateHeartOutline(cx, cy, scale, count) {
   const pts = [];
   for (let i = 0; i < count; i++) {
@@ -85,8 +85,8 @@ function generateHeartOutline(cx, cy, scale, count) {
 // ---------------- PARTICLES ----------------
 class Particle {
   constructor() {
-    this.x = Math.random()*w;
-    this.y = Math.random()*h;
+    this.x = Math.random() * w;
+    this.y = Math.random() * h;
     this.tx = this.x;
     this.ty = this.y;
   }
@@ -101,14 +101,14 @@ class Particle {
   }
   draw() {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 2, 0, Math.PI*2);
+    ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(244,180,200,0.9)";
     ctx.fill();
   }
 }
 
 const COUNT = 240;
-const particles = Array.from({length: COUNT}, () => new Particle());
+const particles = Array.from({ length: COUNT }, () => new Particle());
 let heartTargets = [];
 
 // ---------------- STATE ----------------
@@ -117,15 +117,18 @@ let revealAt = 0;
 let typed = 0;
 let finished = false;
 
+// 🔴 SINGLE SOURCE OF TRUTH
+let heartCenterY = 0;
+
 // ---------------- LOOP ----------------
 function animate(ts) {
   ctx.fillStyle = "rgba(5,5,10,0.25)";
-  ctx.fillRect(0,0,w,h);
+  ctx.fillRect(0, 0, w, h);
 
   let energy = 0;
   if (started) {
     analyser.getByteFrequencyData(dataArray);
-    energy = dataArray.reduce((a,b)=>a+b,0)/dataArray.length;
+    energy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
   }
 
   if (!locked && energy > 25) {
@@ -133,41 +136,43 @@ function animate(ts) {
     revealAt = ts;
   }
 
-  // -------- NAME (SHIFTED UP FOR PERFECT CENTER) --------
+  // ---------------- NAME ----------------
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
   ctx.fillText(
     locked ? HER_NAME : "stay here",
-    w/2,
-    h/2 - 6   // 👈 FINAL FIX (UPWARD SHIFT)
+    w / 2,
+    locked ? heartCenterY + 6 : h / 2
   );
 
-  // -------- MESSAGE --------
+  // ---------------- MESSAGE ----------------
   if (locked && !finished) {
-    const t = (ts - revealAt)/1000;
-    if (t > 1.5) typed = Math.min(HER_MSG.length, Math.floor((t-1.5)*18));
+    const t = (ts - revealAt) / 1000;
+    if (t > 1.5) typed = Math.min(HER_MSG.length, Math.floor((t - 1.5) * 18));
     ctx.font = "16px system-ui";
-    ctx.fillText(HER_MSG.slice(0,typed), w/2, h/2 + 40);
+    ctx.fillText(HER_MSG.slice(0, typed), w / 2, h / 2 + 40);
 
     if (typed === HER_MSG.length) {
       finished = true;
-      heartTargets = generateHeartOutline(w/2, h/2 - 30, 6, COUNT);
-      particles.forEach((p,i)=>p.setTarget(heartTargets[i]));
+      heartCenterY = h / 2 - 30; // 🔥 HEART CENTER DEFINED ONCE
+      heartTargets = generateHeartOutline(w / 2, heartCenterY, 6, COUNT);
+      particles.forEach((p, i) => p.setTarget(heartTargets[i]));
     }
   }
 
-  // -------- PARTICLES FORM HEART --------
-  particles.forEach(p=>{
+  // ---------------- PARTICLES ----------------
+  particles.forEach(p => {
     p.update(finished);
     p.draw();
   });
 
-  // -------- FINAL LINE --------
+  // ---------------- FINAL LINE ----------------
   if (finished) {
     ctx.font = "17px system-ui";
-    ctx.fillText(FINAL_LINE, w/2, h/2 + 90);
+    ctx.fillText(FINAL_LINE, w / 2, heartCenterY + 60);
   }
 
   requestAnimationFrame(animate);
