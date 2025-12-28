@@ -22,8 +22,8 @@ canvas { display:block; }
 <script>
 // ================= CUSTOMIZE =================
 const HER_NAME = "Naina";
-const MESSAGE  = "this was always for you";
-const FINAL    = "and I wanted you to feel it";
+const LINE_1   = "this was always for you";
+const LINE_2   = "and I wanted you to feel it";
 // =============================================
 
 const canvas = document.getElementById("c");
@@ -37,11 +37,10 @@ function resize() {
 addEventListener("resize", resize);
 resize();
 
-// -------- FIXED POSITIONS (NO STATE DRIFT) --------
-const NAME_Y_OFFSET   = -20;
-const HEART_Y_OFFSET  = -40;
-const MSG_GAP         = 85;
-const FINAL_GAP       = 120;
+// -------- FIXED POSITIONS --------
+const NAME_Y_OFFSET  = -20;
+const HEART_Y_OFFSET = -40;
+const TEXT_GAP       = 85;
 
 // -------- HEART SHAPE --------
 function heartPoints(cx, cy, scale, count) {
@@ -99,8 +98,9 @@ function animate(now) {
 
   const cx = w/2;
   const heartY = h/2 + HEART_Y_OFFSET;
+  const textY  = heartY + TEXT_GAP;
 
-  // NAME (never moves)
+  // NAME (stable)
   if (t > 1) {
     ctx.fillStyle="white";
     ctx.font="42px system-ui";
@@ -109,14 +109,7 @@ function animate(now) {
     ctx.fillText(HER_NAME, cx, h/2 + NAME_Y_OFFSET);
   }
 
-  // MESSAGE (below heart)
-  if (t > 2) {
-    ctx.font="16px system-ui";
-    ctx.fillStyle="rgba(255,255,255,0.85)";
-    ctx.fillText(MESSAGE, cx, heartY + MSG_GAP);
-  }
-
-  // HEART FORMATION
+  // HEART
   if (t > 3) {
     const targets = heartPoints(cx, heartY, 6, COUNT);
     particles.forEach((p,i)=>p.setTarget(targets[i]));
@@ -127,11 +120,14 @@ function animate(now) {
     p.draw();
   });
 
-  // FINAL LINE
-  if (t > 4) {
-    ctx.font="17px system-ui";
+  // 🔥 SINGLE TEXT SLOT (OVERRIDE LOGIC)
+  if (t > 3.5) {
+    let currentLine = LINE_1;
+    if (t > 5) currentLine = LINE_2;
+
+    ctx.font="16px system-ui";
     ctx.fillStyle="rgba(255,180,200,0.9)";
-    ctx.fillText(FINAL, cx, heartY + FINAL_GAP);
+    ctx.fillText(currentLine, cx, textY);
   }
 
   requestAnimationFrame(animate);
