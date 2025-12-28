@@ -56,7 +56,7 @@ let micStarted = false;
 overlay.onclick = async () => {
   overlay.remove();
   audioCtx = new (AudioContext || webkitAudioContext)();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
   const src = audioCtx.createMediaStreamSource(stream);
   analyser = audioCtx.createAnalyser();
   analyser.fftSize = 256;
@@ -117,14 +117,14 @@ let typed = 0;
 let messageDone = false;
 let heartReady = false;
 
-let heartCenterY = 0;
+let heartCenterY = h / 2;
 
 // ---------------- LOOP ----------------
-function animate(ts) {
+function animate() {
   ctx.fillStyle = "rgba(5,5,10,0.25)";
   ctx.fillRect(0, 0, w, h);
 
-  // ---------- NAME (NO HANG POSSIBLE) ----------
+  // -------- NAME --------
   const nameY = heartReady ? heartCenterY + 6 : h / 2;
 
   ctx.fillStyle = "white";
@@ -137,16 +137,27 @@ function animate(ts) {
     nameY
   );
 
-  // ---------- MESSAGE ----------
+  // -------- MESSAGE (TYPEWRITER) --------
   if (micStarted && !messageDone) {
     typed = Math.min(HER_MSG.length, typed + 0.4);
+
     ctx.font = "16px system-ui";
-    ctx.fillText(HER_MSG.slice(0, Math.floor(typed)), w / 2, h / 2 + 40);
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+
+    const msgY = heartReady
+      ? heartCenterY + 80   // 🔥 HEART KE NEECH
+      : h / 2 + 40;
+
+    ctx.fillText(
+      HER_MSG.slice(0, Math.floor(typed)),
+      w / 2,
+      msgY
+    );
 
     if (typed >= HER_MSG.length) {
       messageDone = true;
 
-      // define heart ONCE
+      // define heart once
       heartCenterY = h / 2 - 30;
       const targets = generateHeartOutline(w / 2, heartCenterY, 6, COUNT);
       particles.forEach((p, i) => p.setTarget(targets[i]));
@@ -154,16 +165,21 @@ function animate(ts) {
     }
   }
 
-  // ---------- PARTICLES ----------
+  // -------- PARTICLES --------
   particles.forEach(p => {
     p.update(heartReady);
     p.draw();
   });
 
-  // ---------- FINAL LINE ----------
+  // -------- FINAL LINE --------
   if (heartReady) {
     ctx.font = "17px system-ui";
-    ctx.fillText(FINAL_LINE, w / 2, heartCenterY + 60);
+    ctx.fillStyle = "rgba(255,180,200,0.9)";
+    ctx.fillText(
+      FINAL_LINE,
+      w / 2,
+      heartCenterY + 110   // 🔥 CLEAR GAP BELOW HEART
+    );
   }
 
   requestAnimationFrame(animate);
