@@ -10,7 +10,7 @@ html, body {
   padding: 0;
   background: #05050a;
   overflow: hidden;
-  font-family: system-ui;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont;
 }
 #overlay {
   position: fixed;
@@ -63,7 +63,7 @@ overlay.onclick = async () => {
   started = true;
 };
 
-// ---------------- HEART OUTLINE (DETERMINISTIC) ----------------
+// ---------------- HEART OUTLINE POINTS ----------------
 function generateHeartOutline(cx, cy, scale, count) {
   const pts = [];
   for (let i = 0; i < count; i++) {
@@ -133,12 +133,18 @@ function animate(ts) {
     revealAt = ts;
   }
 
-  // TEXT
+  // -------- NAME (SHIFTED UP FOR PERFECT CENTER) --------
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
-  ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 + 2);
+  ctx.textBaseline = "middle";
+  ctx.fillText(
+    locked ? HER_NAME : "stay here",
+    w/2,
+    h/2 - 6   // 👈 FINAL FIX (UPWARD SHIFT)
+  );
 
+  // -------- MESSAGE --------
   if (locked && !finished) {
     const t = (ts - revealAt)/1000;
     if (t > 1.5) typed = Math.min(HER_MSG.length, Math.floor((t-1.5)*18));
@@ -152,11 +158,13 @@ function animate(ts) {
     }
   }
 
+  // -------- PARTICLES FORM HEART --------
   particles.forEach(p=>{
     p.update(finished);
     p.draw();
   });
 
+  // -------- FINAL LINE --------
   if (finished) {
     ctx.font = "17px system-ui";
     ctx.fillText(FINAL_LINE, w/2, h/2 + 90);
