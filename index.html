@@ -77,22 +77,27 @@ document.getElementById("overlay").onclick = async () => {
 };
 
 // ---------------- HEART MATH ----------------
-// Heart implicit equation (normalized):
-// (x^2 + y^2 - 1)^3 - x^2*y^3 <= 0  => inside heart
 function isInsideHeart(nx, ny) {
   const a = nx*nx + ny*ny - 1;
   return (a*a*a - nx*nx*ny*ny*ny) <= 0;
 }
 
-// Draw heart outline
 function drawHeart(cx, cy, size, alpha) {
   ctx.save();
   ctx.beginPath();
   const t = size * 0.3;
   ctx.moveTo(cx, cy + size/4);
   ctx.bezierCurveTo(cx, cy, cx - size/2, cy, cx - size/2, cy + t);
-  ctx.bezierCurveTo(cx - size/2, cy + (size+t)/2, cx, cy + (size+t)/2, cx, cy + size);
-  ctx.bezierCurveTo(cx, cy + (size+t)/2, cx + size/2, cy + (size+t)/2, cx + size/2, cy + t);
+  ctx.bezierCurveTo(
+    cx - size/2, cy + (size+t)/2,
+    cx, cy + (size+t)/2,
+    cx, cy + size
+  );
+  ctx.bezierCurveTo(
+    cx, cy + (size+t)/2,
+    cx + size/2, cy + (size+t)/2,
+    cx + size/2, cy + t
+  );
   ctx.bezierCurveTo(cx + size/2, cy, cx, cy, cx, cy + size/4);
   ctx.strokeStyle = `rgba(255,180,200,${alpha})`;
   ctx.lineWidth = 2;
@@ -103,51 +108,58 @@ function drawHeart(cx, cy, size, alpha) {
 // ---------------- PARTICLES ----------------
 class Particle {
   constructor() {
-    this.reset();
-  }
-  reset() {
     this.x = Math.random()*w;
     this.y = Math.random()*h;
     this.vx = (Math.random()-0.5)*0.6;
     this.vy = (Math.random()-0.5)*0.6;
     this.size = 2;
+    this.settled = false;
   }
+
   update(energy, settle) {
+    if (this.settled) return;
+
     if (!settle) {
       this.x += this.vx + energy*0.01*(Math.random()-0.5);
       this.y += this.vy + energy*0.01*(Math.random()-0.5);
-      if (this.x<0||this.x>w) this.vx*=-1;
-      if (this.y<0||this.y>h) this.vy*=-1;
+      if (this.x < 0 || this.x > w) this.vx *= -1;
+      if (this.y < 0 || this.y > h) this.vy *= -1;
       return;
     }
-    // attract to heart interior
-    const cx = w/2, cy = h/2 - 40;
+
+    const cx = w/2;
+    const cy = h/2 - 40;
     const size = 90;
-    // map to normalized heart space
+
     const nx = (this.x - cx) / size;
     const ny = (this.y - (cy + size*0.5)) / size;
 
-    if (!isInsideHeart(nx, ny)) {
-      // pull towards center
-      const dx = cx - this.x;
-      const dy = (cy + size*0.6) - this.y;
-      this.vx += dx * 0.0008;
-      this.vy += dy * 0.0008;
-    } else {
-      // damp inside
-      this.vx *= 0.85;
-      this.vy *= 0.85;
+    if (isInsideHeart(nx, ny)) {
+      this.settled = true;
+      this.vx = 0;
+      this.vy = 0;
+      return;
     }
+
+    const dx = cx - this.x;
+    const dy = (cy + size*0.6) - this.y;
+    this.vx += dx * 0.0008;
+    this.vy += dy * 0.0008;
+
     this.x += this.vx;
     this.y += this.vy;
   }
+
   draw(warm) {
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
-    ctx.fillStyle = warm ? "rgba(244,180,200,0.8)" : "rgba(180,180,255,0.35)";
+    ctx.fillStyle = warm
+      ? "rgba(244,180,200,0.8)"
+      : "rgba(180,180,255,0.35)";
     ctx.fill();
   }
 }
+
 const particles = Array.from({length: 260}, ()=>new Particle());
 
 // ---------------- STATE ----------------
@@ -174,13 +186,12 @@ function animate(ts) {
     revealAt = ts;
   }
 
-  // particles
   particles.forEach(p=>{
     p.update(energy, finished);
     p.draw(locked);
   });
 
-  // NAME (optical center of heart)
+  // NAME (optical center)
   ctx.save();
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
@@ -189,11 +200,14 @@ function animate(ts) {
   ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 + 10);
   ctx.restore();
 
-  // MESSAGE TYPEWRITER
+  // MESSAGE
   if (locked && !finished) {
     const elapsed = (ts - revealAt)/1000;
     if (elapsed > 1.5) {
-      typedChars = Math.min(HER_MSG.length, Math.floor((elapsed-1.5)*TYPE_SPEED));
+      typedChars = Math.min(
+        HER_MSG.length,
+        Math.floor((elapsed-1.5)*TYPE_SPEED)
+      );
     }
     ctx.save();
     ctx.fillStyle = "rgba(255,255,255,0.85)";
@@ -201,16 +215,19 @@ function animate(ts) {
     ctx.textAlign = "center";
     ctx.fillText(HER_MSG.slice(0, typedChars), w/2, h/2 + 40);
     ctx.restore();
+
     if (typedChars === HER_MSG.length) finished = true;
   }
 
-  // FINAL HEART + settle
+  // FINAL HEART
   if (finished) {
     ctx.save();
     ctx.fillStyle = "rgba(0,0,0,0.35)";
     ctx.fillRect(0,0,w,h);
+
     const pulse = 0.6 + 0.4*Math.sin(ts/260);
     drawHeart(w/2, h/2 - 40, 90 + pulse*8, pulse);
+
     ctx.fillStyle = "rgba(255,255,255,0.95)";
     ctx.font = "17px system-ui";
     ctx.textAlign = "center";
