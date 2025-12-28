@@ -137,7 +137,7 @@ function animate(ts) {
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
-  ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 + 10);
+  ctx.fillText(locked ? HER_NAME : "stay here", w/2, h/2 + 2);
 
   if (locked && !finished) {
     const t = (ts - revealAt)/1000;
