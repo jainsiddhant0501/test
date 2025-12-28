@@ -118,7 +118,7 @@ let typed = 0;
 let finished = false;
 
 // 🔴 SINGLE SOURCE OF TRUTH
-let heartCenterY = 0;
+let heartCenterY = h / 2; // IMPORTANT: initialized to screen center
 
 // ---------------- LOOP ----------------
 function animate(ts) {
@@ -136,29 +136,43 @@ function animate(ts) {
     revealAt = ts;
   }
 
-  // ---------------- NAME ----------------
+  // ---------------- NAME (NO JUMP, NO LATKNA) ----------------
+  const nameY = finished
+    ? heartCenterY + 6     // after heart exists
+    : h / 2;               // before heart
+
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
   ctx.fillText(
     locked ? HER_NAME : "stay here",
     w / 2,
-    locked ? heartCenterY + 6 : h / 2
+    nameY
   );
 
   // ---------------- MESSAGE ----------------
   if (locked && !finished) {
     const t = (ts - revealAt) / 1000;
-    if (t > 1.5) typed = Math.min(HER_MSG.length, Math.floor((t - 1.5) * 18));
+    if (t > 1.5) {
+      typed = Math.min(HER_MSG.length, Math.floor((t - 1.5) * 18));
+    }
+
     ctx.font = "16px system-ui";
     ctx.fillText(HER_MSG.slice(0, typed), w / 2, h / 2 + 40);
 
     if (typed === HER_MSG.length) {
       finished = true;
-      heartCenterY = h / 2 - 30; // 🔥 HEART CENTER DEFINED ONCE
-      heartTargets = generateHeartOutline(w / 2, heartCenterY, 6, COUNT);
+
+      // 🔥 DEFINE HEART CENTER ONCE
+      heartCenterY = h / 2 - 30;
+
+      heartTargets = generateHeartOutline(
+        w / 2,
+        heartCenterY,
+        6,
+        COUNT
+      );
       particles.forEach((p, i) => p.setTarget(heartTargets[i]));
     }
   }
