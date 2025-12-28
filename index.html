@@ -50,7 +50,9 @@ addEventListener("resize", resize);
 resize();
 
 // ---------------- AUDIO ----------------
-let audioCtx, analyser, dataArray, started = false;
+let audioCtx, analyser, dataArray;
+let micStarted = false;
+
 overlay.onclick = async () => {
   overlay.remove();
   audioCtx = new (AudioContext || webkitAudioContext)();
@@ -60,7 +62,7 @@ overlay.onclick = async () => {
   analyser.fftSize = 256;
   dataArray = new Uint8Array(analyser.frequencyBinCount);
   src.connect(analyser);
-  started = true;
+  micStarted = true;
 };
 
 // ---------------- HEART POINTS ----------------
@@ -109,82 +111,57 @@ class Particle {
 
 const COUNT = 240;
 const particles = Array.from({ length: COUNT }, () => new Particle());
-let heartTargets = [];
 
 // ---------------- STATE ----------------
-let locked = false;
-let revealAt = 0;
 let typed = 0;
-let finished = false;
+let messageDone = false;
+let heartReady = false;
 
-// 🔴 SINGLE SOURCE OF TRUTH
-let heartCenterY = h / 2; // IMPORTANT: initialized to screen center
+let heartCenterY = 0;
 
 // ---------------- LOOP ----------------
 function animate(ts) {
   ctx.fillStyle = "rgba(5,5,10,0.25)";
   ctx.fillRect(0, 0, w, h);
 
-  let energy = 0;
-  if (started) {
-    analyser.getByteFrequencyData(dataArray);
-    energy = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-  }
-
-  if (!locked && energy > 25) {
-    locked = true;
-    revealAt = ts;
-  }
-
-  // ---------------- NAME (NO JUMP, NO LATKNA) ----------------
-  const nameY = finished
-    ? heartCenterY + 6     // after heart exists
-    : h / 2;               // before heart
+  // ---------- NAME (NO HANG POSSIBLE) ----------
+  const nameY = heartReady ? heartCenterY + 6 : h / 2;
 
   ctx.fillStyle = "white";
   ctx.font = "42px system-ui";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(
-    locked ? HER_NAME : "stay here",
+    micStarted ? HER_NAME : "stay here",
     w / 2,
     nameY
   );
 
-  // ---------------- MESSAGE ----------------
-  if (locked && !finished) {
-    const t = (ts - revealAt) / 1000;
-    if (t > 1.5) {
-      typed = Math.min(HER_MSG.length, Math.floor((t - 1.5) * 18));
-    }
-
+  // ---------- MESSAGE ----------
+  if (micStarted && !messageDone) {
+    typed = Math.min(HER_MSG.length, typed + 0.4);
     ctx.font = "16px system-ui";
-    ctx.fillText(HER_MSG.slice(0, typed), w / 2, h / 2 + 40);
+    ctx.fillText(HER_MSG.slice(0, Math.floor(typed)), w / 2, h / 2 + 40);
 
-    if (typed === HER_MSG.length) {
-      finished = true;
+    if (typed >= HER_MSG.length) {
+      messageDone = true;
 
-      // 🔥 DEFINE HEART CENTER ONCE
+      // define heart ONCE
       heartCenterY = h / 2 - 30;
-
-      heartTargets = generateHeartOutline(
-        w / 2,
-        heartCenterY,
-        6,
-        COUNT
-      );
-      particles.forEach((p, i) => p.setTarget(heartTargets[i]));
+      const targets = generateHeartOutline(w / 2, heartCenterY, 6, COUNT);
+      particles.forEach((p, i) => p.setTarget(targets[i]));
+      heartReady = true;
     }
   }
 
-  // ---------------- PARTICLES ----------------
+  // ---------- PARTICLES ----------
   particles.forEach(p => {
-    p.update(finished);
+    p.update(heartReady);
     p.draw();
   });
 
-  // ---------------- FINAL LINE ----------------
-  if (finished) {
+  // ---------- FINAL LINE ----------
+  if (heartReady) {
     ctx.font = "17px system-ui";
     ctx.fillText(FINAL_LINE, w / 2, heartCenterY + 60);
   }
